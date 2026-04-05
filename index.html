@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Meaningful RSA</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        textarea { width: 100%; height: 100px; margin: 10px 0; }
+        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        .output { background: #f4f4f4; padding: 10px; word-break: break-all; border-radius: 4px; min-height: 50px; }
+    </style>
+</head>
+<body>
+    <h2>Our RSA Messenger</h2>
+    <p>Using Primes: <strong>1201</strong> & <strong>727</strong></p>
+
+    <label>Input Text:</label>
+    <textarea id="inputText" placeholder="Enter message or ciphertext list here..."></textarea>
+    
+    <button onclick="handleEncrypt()">Encrypt</button>
+    <button onclick="handleDecrypt()">Decrypt</button>
+
+    <h3>Result:</h3>
+    <div id="result" class="output"></div>
+
+    <script>
+        // RSA Setup using your meaningful primes
+        const p = 1201n;
+        const q = 727n;
+        const n = p * q;
+        const phi = (p - 1n) * (q - 1n);
+        const e = 65537n;
+
+        // Function to find Modular Inverse (d)
+        function modInverse(e, phi) {
+            let t = 0n, newt = 1n;
+            let r = phi, newr = e;
+            while (newr !== 0n) {
+                let quotient = r / newr;
+                [t, newt] = [newt, t - quotient * newt];
+                [r, newr] = [newr, r - quotient * newr];
+            }
+            if (r > 1n) return null;
+            if (t < 0n) t = t + phi;
+            return t;
+        }
+
+        const d = modInverse(e, phi);
+
+        // Modular Exponentiation: (base^exp) % mod
+        function expMod(base, exp, mod) {
+            let res = 1n;
+            base = base % mod;
+            while (exp > 0n) {
+                if (exp % 2n === 1n) res = (res * base) % mod;
+                base = (base * base) % mod;
+                exp = exp / 2n;
+            }
+            return res;
+        }
+
+        function handleEncrypt() {
+            const text = document.getElementById('inputText').value;
+            const encrypted = [];
+            for (let i = 0; i < text.length; i++) {
+                let m = BigInt(text.charCodeAt(i)) + BigInt(i); // Unicode + Salt
+                encrypted.push(expMod(m, e, n).toString());
+            }
+            document.getElementById('result').innerText = encrypted.join(", ");
+        }
+
+        function handleDecrypt() {
+            try {
+                const input = document.getElementById('inputText').value;
+                const codes = input.split(",").map(x => BigInt(x.trim()));
+                let decrypted = "";
+                for (let i = 0; i < codes.length; i++) {
+                    let m_salted = expMod(codes[i], d, n);
+                    decrypted += String.fromCharCode(Number(m_salted - BigInt(i)));
+                }
+                document.getElementById('result').innerText = decrypted;
+            } catch (err) {
+                document.getElementById('result').innerText = "Error: Invalid Ciphertext format.";
+            }
+        }
+    </script>
+</body>
+</html>
